@@ -30,7 +30,7 @@ def validate_ipaddress(ip):
 	try:
 		range_of_ips = []
 		if not ip.startswith('#'):
-			""" Opted to not parse CIDR as the could be large """
+			""" Opted to not parse CIDR as they could be large """
 			cidr_check = ip.split('/')
 			if len(cidr_check) == 2:
 				pass
