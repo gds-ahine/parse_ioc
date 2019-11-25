@@ -1,11 +1,14 @@
+#!/usr/bin/env python3
+""" Script to parse IOC (Indicator Of Compromise) from Open Source Threat Feed websites """
+
 import ipaddress
 import requests
 import json
 #import iocextract
 
+""" Splunk HTTP Event Collector URL and Token """
 hec_endpoint = 'http://127.0.0.1:8088/services/collector'
 hec_token = ''
-
 headers = {"Authorization": 'Splunk ' + hec_token}
 plist = []
 list = []
@@ -22,20 +25,12 @@ def parse_ioc_from_website(url):
 	except Exception:
                 print(f"URL fetch error: {response.text}")
  	
-""" parse local file """
-"""
-with open(file,"r") as fp:
-	list = [line.strip() for line in fp.readlines()]
-fp.close()
-"""
-
 """ Check IPv4 address or range Does not parse CIDR """
 def validate_ipaddress(ip):
 	try:
 		range_of_ips = []
 		if not ip.startswith('#'):
 			""" Opted to not parse CIDR as the could be large """
-			# Opted to not parse CIDR
 			cidr_check = ip.split('/')
 			if len(cidr_check) == 2:
 				pass
@@ -73,6 +68,7 @@ def send_to_splunk(final_payload):
  
 def main():
 	try:
+		""" testing local files """
 		"""
                 with open(file,"r") as fp:
                         list = [line.strip() for line in fp.readlines()]
@@ -91,13 +87,14 @@ def main():
 			list = parse_ioc_from_website(tf_url)
 
 			if tf_type == 'ip':
-				#list = parse_ioc_from_website(tf_url)
 				for ip in list:
 					validated_ip = validate_ipaddress(ip)
 					if validated_ip is not None:
 						for ioc in validated_ip:
+							""" build JSON payload to send to Splunk """
 							payload = '{"sourcetype": "_json", "event": {"ip": "' + ioc + '","feed":"' + tf + '"}}'
 							plist.append(payload)
+				""" send single JSON payload to Splunk """
 				final_payload = ''.join(plist)
 				send_to_splunk(final_payload)
 			""" parse using iocextract for these IOCs """
