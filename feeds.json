@@ -1,0 +1,7 @@
+{"feeds":
+	[
+		{"feed_name": "Emerging Threat Rules", "feed_type": "ip", "feed_url": "https://rules.emergingthreats.net/blockrules/compromised-ips.txt"},
+
+		{"feed_name": "malware domain list", "feed_type": "ip", "feed_url": "https://panwdbl.appspot.com/lists/mdl.txt"}
+	]
+}
