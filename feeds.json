@@ -2,6 +2,10 @@
 	[
 		{"feed_name": "Emerging Threat Rules", "feed_type": "ip", "feed_url": "https://rules.emergingthreats.net/blockrules/compromised-ips.txt"},
 
-		{"feed_name": "malware domain list", "feed_type": "ip", "feed_url": "https://panwdbl.appspot.com/lists/mdl.txt"}
+		{"feed_name": "abuse.ch ransomware IP blocklist", "feed_type": "ip", "feed_url": "https://ransomwaretracker.abuse.ch/downloads/RW_IPBL.txt"},
+		{"feed_name": "malware domain list", "feed_type": "ip", "feed_url": "https://panwdbl.appspot.com/lists/mdl.txt"},
+		{"feed_name": "abuse.ch ransomware Domains blocklist", "feed_type": "domain", "feed_url": "https://ransomwaretracker.abuse.ch/downloads/RW_DOMBL.txt"},
+		{"feed_name": "abuse.ch ransomware URL blocklist", "feed_type": "url", "feed_url": "https://ransomwaretracker.abuse.ch/downloads/RW_URLBL.txt"}
+
 	]
 }
