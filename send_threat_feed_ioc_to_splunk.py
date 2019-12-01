@@ -2,13 +2,15 @@
 
 import ipaddress
 import requests
+#import iocextract
 import json
+import re
 
 hec_endpoint = 'http://127.0.0.1:8088/services/collector'
-hec_token = ''
+hec_token = 'aabc8410-f63e-4ba7-9d68-a166d4a0e699'
 
 headers = {"Authorization": 'Splunk ' + hec_token}
-plist = []
+indicator_list = []
 list = []
 file = 'feeds.json'
 
@@ -16,8 +18,8 @@ def parse_ioc_from_website(url):
 	try:
 		response = requests.get(url)
 		data = response.text
-		ip_list = data.splitlines()
-		return ip_list
+		ioc_list = data.splitlines()
+		return ioc_list
 	except Exception:
                 print(f"URL fetch error: {response.text}")
  	
@@ -38,7 +40,6 @@ def validate_ipaddress(ip):
 					range_of_ips.append(str(ipaddress.ip_address(ipaddress.IPv4Address(ip_int))))
 			elif len(parsed_ip) == 1:
 				range_of_ips.append(str(ipaddress.ip_address(parsed_ip[0])))
-				print(parsed_ip)
 			else:
 				range_of_ips.append(str(ipaddress.ip_address(ip)))
 			return range_of_ips
@@ -46,6 +47,11 @@ def validate_ipaddress(ip):
        		print(errorCode)
        		return False
  
+def build_payload(ioc,tf):
+	payload = '{"sourcetype": "_json", "event": {"feed": "' + tf + '","indicator":"' + ioc + '"}}'
+	indicator_list.append(payload)
+	return indicator_list
+	
 def send_to_splunk(final_payload):
 	try:
 		r = requests.post(hec_endpoint, final_payload, headers=headers, verify=False)
@@ -62,7 +68,6 @@ def send_to_splunk(final_payload):
  
 def main():
 	try:
-
 		with open(file, 'r') as fn:
        			 feed_data=fn.read()
 
@@ -79,12 +84,18 @@ def main():
 					validated_ip = validate_ipaddress(ip)
 					if validated_ip is not None:
 						for ioc in validated_ip:
-							payload = '{"sourcetype": "_json", "event": {"ip": "' + ioc + '","feed":"' + tf + '"}}'
-							plist.append(payload)
-				final_payload = ''.join(plist)
+							build_payload(ip,tf)
+				final_payload = ''.join(indicator_list)
 				send_to_splunk(final_payload)
 			elif tf_type == 'domain':
-				pass
+				for domain_name in list:
+					if not domain_name or domain_name.startswith('#'):
+						pass
+					else:
+						extracted_domain = re.match(r'(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}',domain_name)
+						build_payload(extracted_domain.group(0),tf)
+				final_payload = ''.join(indicator_list)
+				send_to_splunk(final_payload)
 			elif tf_type == 'url':
 				pass
 			elif tf_type == 'hash':
