@@ -19,6 +19,8 @@ def parse_ioc_from_website(url):
 		response = requests.get(url)
 		data = response.text
 		ioc_list = data.splitlines()
+		if not 'alienvault.com' in url:
+			ioc_list = [x for x in ioc_list if '#' not in x]
 		return ioc_list
 	except Exception:
 		print(f"URL fetch error: {response.text}")
@@ -64,7 +66,7 @@ def build_payload(ioc, tf, tf_type):
 """ send IOC payload to Splunk """
 def send_to_splunk(final_payload):
 	try:
-		r = requests.post(hec_endpoint, final_payload, headers=headers, verify=False)
+		r = requests.post(hec_endpoint, final_payload, headers=headers, verify=False, allow_redirects=True)
 		if (r.status_code != 200):
 			print('failed with non 200 status code')
 			print(r.text)
@@ -74,18 +76,6 @@ def send_to_splunk(final_payload):
 			failed = False
 	except Exception:
 			print(f"URL fetch error: {r.text}")
-
-""" use iocextract for urls, email, hash and ipv6 feeds """
-def extract_ioc(ioc, tf, tf_type):
-	if tf_type == 'url':
-		for parsed_url in iocextract.extract_urls(ioc, refang=True):
-			if not ioc or ioc.startswith('#'):
-				pass
-			else:
-				build_payload(parsed_url, tf, tf_type)
-		final_payload = ''.join(indicator_list)
-		send_to_splunk(final_payload)
-		return final_payload
 
 
 def main():
@@ -101,7 +91,14 @@ def main():
 			tf_url = threat_feed['feed_url']
 			list = parse_ioc_from_website(tf_url)
 
-			if tf_type == 'ip':
+			if tf == 'AlienVault OTX Reputation data':
+				for otx_ip in list:
+					foo = otx_ip.split('#')
+					#print(foo[0])
+					build_payload(foo[0], tf, tf_type)
+				final_payload = ''.join(indicator_list)
+				send_to_splunk(final_payload)
+			elif tf_type == 'ip':
 				for ip in list:
 					validated_ip = validate_ipaddress(ip)
 					if validated_ip is not None:
@@ -111,19 +108,13 @@ def main():
 				send_to_splunk(final_payload)
 			elif tf_type == 'domain':
 				for domain_name in list:
-					if not domain_name or domain_name.startswith('#'):
-						pass
-					else:
-						extracted_domain = re.match(r'(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}',domain_name)
-						build_payload(extracted_domain.group(0),tf,tf_type)
+					extracted_domain = re.match(r'(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}',domain_name)
+					build_payload(extracted_domain.group(0),tf,tf_type)
 				final_payload = ''.join(indicator_list)
 				send_to_splunk(final_payload)
 			elif tf_type == 'url':
 				for url in list:
-					if not url or url.startswith('#'):
-						pass
-					else:
-						build_payload(url, tf, tf_type)
+					build_payload(url, tf, tf_type)
 				final_payload = ''.join(indicator_list)
 				send_to_splunk(final_payload)
 			elif tf_type == 'hash':
