@@ -1,0 +1,7 @@
+{"feeds":
+	[
+		{"feed_name": "AlienVault OTX Reputation data", "feed_type": "ip", "feed_url": "http://reputation.alienvault.com/reputation.data"},
+		{"feed_name": "Cisco Talos blacklist", "feed_type": "ip", "feed_url": "http://www.talosintelligence.com/documents/ip-blacklist"},
+		{"feed_name": "malware domain list", "feed_type": "ip", "feed_url": "https://panwdbl.appspot.com/lists/mdl.txt"},
+		{"feed_name": "joewein.de domain blacklist", "feed_type": "domain", "feed_url": "http://www.joewein.net/dl/bl/dom-bl.txt"}
+}

@@ -1,16 +1,9 @@
 {"feeds":
 	[
-		{"feed_name": "AlienVault OTX Reputation data", "feed_type": "ip", "feed_url": "http://reputation.alienvault.com/reputation.data"},
 		{"feed_name": "abuse.ch ransomware IP blocklist", "feed_type": "ip", "feed_url": "https://ransomwaretracker.abuse.ch/downloads/RW_IPBL.txt"},
-		{"feed_name": "Blocklist.de Blocklist", "feed_type": "ip", "feed_url": "https://lists.blocklist.de/lists/all.txt"},
-		{"feed_name": "CI Bad Guys (cinscore.com)", "feed_type": "ip", "feed_url": "http://cinsscore.com/list/ci-badguys.txt"},
-		{"feed_name": "Emerging Threats blockrules", "feed_type": "ip", "feed_url": "https://rules.emergingthreats.net/blockrules/compromised-ips.txt"},
 		{"feed_name": "Cisco Talos blacklist", "feed_type": "ip", "feed_url": "http://www.talosintelligence.com/documents/ip-blacklist"},
 		{"feed_name": "Tor exit nodes", "feed_type": "ip", "feed_url": "https://www.dan.me.uk/torlist/"},
-		{"feed_name": "malware domain list", "feed_type": "ip", "feed_url": "https://panwdbl.appspot.com/lists/mdl.txt"},
-		{"feed_name": "joewein.de domain blacklist", "feed_type": "domain", "feed_url": "http://www.joewein.net/dl/bl/dom-bl.txt"},
 		{"feed_name": "abuse.ch ransomware Domains blocklist", "feed_type": "domain", "feed_url": "https://ransomwaretracker.abuse.ch/downloads/RW_DOMBL.txt"},
-		{"feed_name": "OpenPhish", "feed_type": "url", "feed_url": "https://openphish.com/feed.txt"},
 		{"feed_name": "URLHaus", "feed_type": "url", "feed_url": "https://urlhaus.abuse.ch/downloads/text/"},
 		{"feed_name": "abuse.ch ransomware URL blocklist", "feed_type": "url", "feed_url": "https://ransomwaretracker.abuse.ch/downloads/RW_URLBL.txt"}
 	]
