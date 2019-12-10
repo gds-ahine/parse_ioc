@@ -8,7 +8,7 @@ import requests
 import iocextract
 
 warnings.filterwarnings('ignore', message='Unverified HTTPS request')
-hec_endpoint = 'https://http-inputs-gds.splunkcloud.com/services/collector'
+hec_endpoint = ''
 hec_token = ''
 
 headers = {"Authorization": 'Splunk ' + hec_token}
