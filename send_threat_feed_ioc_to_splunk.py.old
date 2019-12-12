@@ -3,113 +3,29 @@ import ipaddress
 import json
 import re
 import requests
-import logging
+import iocextract
 import boto3
 
 warnings.filterwarnings('ignore', message='Unverified HTTPS request')
-hec_endpoint = 'http://127.0.0.1:8088/services/collector'
-splunk_hec_token = 'aabc8410-f63e-4ba7-9d68-a166d4a0e699'
+hec_endpoint = 'https://http-inputs-gds.splunkcloud.com/services/collector'
+ssm_param = '/threat_feeds/opensource/hec_token'
 indicator_list = []
 list = []
 urlhaus_list = []
 file = 'feeds.json'
-s3_bucket = 'ah-open-source-threat-feeds-test-bucket'
-s3_ip_filename = 'ip.txt'
-s3_domain_filename = 'domain.txt'
-s3_url_filename = 'url.txt'
 event = ''
 context = ''
 
+""" Get Splunk HEC token from SSM Parameter Store  """
+ssm_client = boto3.client('ssm', region_name='eu-west-2')
 
-def update_s3_indicators_file(tf_type, i_list):
-    tmp_ip_list = []
-    tmp_domain_list = []
-    tmp_url_list = []
-    s3 = boto3.resource('s3')
-    try:
-        """ Check to see if we have previously ingested this IP """
-        if tf_type == 'ip':
-            s3.meta.client.download_file(s3_bucket, s3_ip_filename, '/tmp/' + s3_ip_filename)
 
-            """ Download previously ingested IP file from S3 """
-            with open('/tmp/' + s3_ip_filename, 'r+') as ipfile_ro:
-                for ip_line in ipfile_ro:
-                    previous_ip = ip_line.strip('\n')
-                    tmp_ip_list.append(previous_ip)
-            ipfile_ro.close()
-
-            """ Get a list of IPs not already ingested """
-            updated_ip_list = [ip_item for ip_item in i_list if ip_item not in tmp_ip_list]
-
-            """ Update the S3 IP file """
-            with open('/tmp/' + s3_ip_filename, 'a+') as ipfile_append:
-                for new_ip in updated_ip_list:
-                    ipfile_append.write(new_ip + '\n')
-            ipfile_append.close()
-
-            """ Upload the updated IP file to S3 """
-            s3.meta.client.upload_file('/tmp/' + s3_ip_filename, s3_bucket, s3_ip_filename)
-
-            """ Validate new IPs """
-            validated_ip_addresses = validate_ipaddress(updated_ip_list)
-            return validated_ip_addresses
-
-        elif tf_type == 'domain':
-            s3.meta.client.download_file(s3_bucket, s3_domain_filename, '/tmp/' + s3_domain_filename)
-
-            """ Download previously ingested domain file from S3 """
-            with open('/tmp/' + s3_domain_filename, 'r+') as domainfile_ro:
-                for domain_line in domainfile_ro:
-                    previous_domain = domain_line.strip('\n')
-                    tmp_domain_list.append(previous_domain)
-            domainfile_ro.close()
-
-            """ Get a list of domains not already ingested """
-            updated_domain_list = [domain_item for domain_item in i_list if domain_item not in tmp_domain_list]
-
-            """ Update the S3 domain file """
-            with open('/tmp/' + s3_domain_filename, 'a+') as domainfile_append:
-                for new_domain in updated_domain_list:
-                    domainfile_append.write(new_domain + '\n')
-            domainfile_append.close()
-
-            """ Upload the updated domain file to S3 """
-            s3.meta.client.upload_file('/tmp/' + s3_domain_filename, s3_bucket, s3_domain_filename)
-
-            return updated_domain_list
-
-        elif tf_type == 'url':
-            s3.meta.client.download_file(s3_bucket, s3_url_filename, '/tmp/' + s3_url_filename)
-
-            """ Download previously ingested URL file from S3 """
-            with open('/tmp/' + s3_url_filename, 'r+') as urlfile_ro:
-                for url_line in urlfile_ro:
-                    #print(url_line)
-                    previous_url = url_line.strip('\n')
-                    tmp_url_list.append(previous_url)
-            urlfile_ro.close()
-
-            #print(tmp_url_list)
-
-            """ Get a list of URLs not already ingested """
-            updated_url_list = [url_item for url_item in i_list if url_item not in tmp_url_list]
-
-            #print(updated_url_list)
-
-            """ Update the S3 URL file """
-            with open('/tmp/' + s3_url_filename, 'a+') as urlfile_append:
-                for new_url in updated_url_list:
-                    urlfile_append.write(new_url + '\n')
-            urlfile_append.close()
-
-            """ Upload the updated URL file to S3 """
-            s3.meta.client.upload_file('/tmp/' + s3_url_filename, s3_bucket, s3_url_filename)
-
-            return updated_url_list
-        else:
-            pass
-    except:
-        print(f"Unable to update indicators file stored in S3")
+def get_ssm_parameter(param):
+    ssm_response = ssm_client.get_parameter(
+        Name=str(param),
+        WithDecryption=True
+        )
+    return ssm_response['Parameter']['Value']
 
 
 def parse_ioc_from_website(url):
@@ -120,6 +36,13 @@ def parse_ioc_from_website(url):
         return ioc_list
     except Exception:
         print(f"URL fetch error: {response.text}")
+
+
+"""
+custom IP validation as iocextract.extract_ips or ipv4s cannot deal
+with ip ranges e.g. 192.168.0.1-192.168.0.253
+"""
+
 
 def validate_ipaddress(ip):
     try:
@@ -154,6 +77,8 @@ def parse_alienvault_reputation_data(indicators):
 
 
 """ build IOC payload for Splunk """
+
+
 def build_payload(ioc, tf, tf_type):
     payload = '{"sourcetype": "_json", "event": {"feed": "' + tf + '","indicator_type": "' + tf_type + '","indicator":"' + ioc + '"}}'
     indicator_list.append(payload)
@@ -161,6 +86,8 @@ def build_payload(ioc, tf, tf_type):
 
 
 """ build URLHaus payload for Splunk """
+
+
 def build_urlhaus_payload(tf, tf_type, dateadded, url, url_status, threat, tags, urlhaus_url):
     payload = '{"sourcetype": "_json", "event": {"feed": "' + tf + '","indicator_type": "' + tf_type + '","indicator": ' + url + ',"status": ' + url_status + ',"threat": ' + threat + ',"tags": ' + tags + ',"date_added": ' + dateadded + ',"urlhaus_url": ' + urlhaus_url + '}}'
     indicator_list.append(payload)
@@ -168,6 +95,8 @@ def build_urlhaus_payload(tf, tf_type, dateadded, url, url_status, threat, tags,
 
 
 """ send IOC payload to Splunk """
+
+
 def send_to_splunk(final_payload, tf, splunk_hec_token):
     try:
         headers = {"Authorization": 'Splunk ' + splunk_hec_token}
@@ -185,7 +114,7 @@ def send_to_splunk(final_payload, tf, splunk_hec_token):
 
 def lambda_handler(event, context):
     try:
-        #splunk_hec_token = get_ssm_parameter(ssm_param)
+        splunk_hec_token = get_ssm_parameter(ssm_param)
         with open(file, 'r') as fn:
             feed_data = fn.read()
 
@@ -216,33 +145,22 @@ def lambda_handler(event, context):
                 final_payload = ''.join(indicator_list)
                 send_to_splunk(final_payload, tf, splunk_hec_token)
             elif tf_type == 'ip':
-                validated_ip_list = update_s3_indicators_file(tf_type, i_list)
+                validated_ip_list = validate_ipaddress(i_list)
                 for parsed_ioc_ip in validated_ip_list:
                     build_payload(parsed_ioc_ip, tf, tf_type)
                 final_payload = ''.join(indicator_list)
-                if not final_payload:
-                    print(f"no new IPs to send to Splunk")
-                else:
-                    send_to_splunk(final_payload, tf, splunk_hec_token)
+                send_to_splunk(final_payload, tf, splunk_hec_token)
             elif tf_type == 'domain':
                 for domain_name in i_list:
                     extracted_domain = re.match(r'(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}', domain_name)
                     build_payload(extracted_domain.group(0), tf, tf_type)
                 final_payload = ''.join(indicator_list)
-                if not final_payload:
-                    print(f"no new domains indicators to send to Splunk")
-                else:
-                    send_to_splunk(final_payload, tf, splunk_hec_token)
+                send_to_splunk(final_payload, tf, splunk_hec_token)
             elif tf_type == 'url':
-                urls_to_send = update_s3_indicators_file(tf_type, i_list)
-                #for url in i_list:
-                for url in urls_to_send:
+                for url in i_list:
                     build_payload(url, tf, tf_type)
                 final_payload = ''.join(indicator_list)
-                if not final_payload:
-                    print(f"no new URLs to send to Splunk")
-                else:
-                    send_to_splunk(final_payload, tf, splunk_hec_token)
+                send_to_splunk(final_payload, tf, splunk_hec_token)
             elif tf_type == 'hash':
                 for hash in i_list:
                     if not hash or hash.startswith('#'):
@@ -274,5 +192,3 @@ def lambda_handler(event, context):
 
 if __name__ == "__main__":
     lambda_handler(event, context)
-    #tf_type = 'ip'
-    #update_s3(tf_type)
