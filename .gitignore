@@ -1,0 +1,8 @@
+*.txt
+*.bak
+*.old
+*.orig
+*.new
+*.1
+csv_recent
+ip-blacklist
